@@ -1,0 +1,1 @@
+g++ -o main main.cpp -I ./include -largon2 ; ./main

@@ -24,76 +24,70 @@ namespace nodepp { class argon2_t {
 protected:
 
     struct NODE {
-        ptr_t<argon2_context> ctx;
-        ptr_t<uint32_t> conf;
-        ptr_t<uchar>    hash;
-        bool state = 0;
-    };  ptr_t<NODE> obj = new NODE();
+        ptr_t<uchar_32> conf;
+        ptr_t<uchar>   hash;
+    };  ptr_t<NODE> obj;
 
 public:
 
     /*.........................................................................*/
 
-    argon2_t( uint32_t t_cost, uint32_t m_cost, uint32_t parallelism ) : obj( new NODE() ) {
-        obj->state = 1; obj->conf = ptr_t<uint32_t>({ t_cost, m_cost, parallelism });
+    argon2_t( uchar_32 size, uchar_32 t_cost, uchar_32 m_cost, uchar_32 parallelism ) : obj( new NODE() ) {
+        obj->conf = ptr_t<uchar_32>({ t_cost, m_cost, parallelism });
+        obj->hash = ptr_t<uchar>( size, '\0' );
     }
 
-    argon2_t() : obj( new NODE() ) {
-        obj->state = 1; obj->conf = ptr_t<uint32_t>({ 2, 64, 1 });
-    }
-
-    /*.........................................................................*/
-
-    int hash( ptr_t<uchar>& hash, const string_t& pass, const string_t& salt, const string_t& secr, const string_t& addr ) const { 
-        if( obj->state != 1 ){ return -1; } 
-
-        obj->ctx = new argon2_context({ 
-                    hash.get(), (uint32_t)hash.size(), 
-            (uchar*)pass.get(), (uint32_t)pass.size(),
-            (uchar*)salt.get(), (uint32_t)salt.size(), 
-            (uchar*)secr.get(), (uint32_t)secr.size(), 
-            (uchar*)addr.get(), (uint32_t)addr.size(), 
-            obj->conf[0], obj->conf[1], 
-            obj->conf[2], obj->conf[2], 
-            ARGON2_VERSION_13, NULL, NULL, ARGON2_DEFAULT_FLAGS
-        }); 
-        
-        int rc = argon2i_ctx( &obj->ctx ); 
-        
-        if( ARGON2_OK != rc ) {
-            process::error( argon2_error_message(rc) );
-        }   return rc;
-    }
-
-    int hash( ptr_t<uchar>& hash, const string_t& pass ) const { 
-        if( obj->state != 1 ){ return -1; } 
-        ptr_t<char> salt ( 16, '\0' );
-
-        obj->ctx = new argon2_context({ 
-                    hash.get(), (uint32_t)hash.size(), 
-            (uchar*)pass.get(), (uint32_t)pass.size(),
-            (uchar*)salt.get(), (uint32_t)salt.size(), 
-            NULL,0, NULL, 0, 
-            obj->conf[0], obj->conf[1], 
-            obj->conf[2], obj->conf[2], 
-            ARGON2_VERSION_13, NULL, NULL, ARGON2_DEFAULT_FLAGS
-        });
-        
-        int rc = argon2i_ctx( &obj->ctx ); 
-        
-        if( ARGON2_OK != rc ) {
-            process::error( argon2_error_message(rc) );
-        }   return rc;
+    argon2_t( uchar_32 size ) : obj( new NODE() ) {
+        obj->hash = ptr_t<uchar>  ( size, '\0' );
+        obj->conf = ptr_t<uchar_32>({ 2, 64, 1 });
     }
 
     /*.........................................................................*/
 
-    int verify( const ptr_t<uchar>& hash ){
-        auto hex = encoder::hex::get( hash );
-        return argon2i_verify_ctx( &obj->ctx, hex.get() );
+    string_t hash( const string_t& pass, const string_t& salt, const string_t& secr, const string_t& addr ) const noexcept { 
+    string_t _salt = salt.empty() ? string_t( obj->hash.size(), '\0' ) : salt;
+
+        argon2_context ctx = { 
+                obj->hash.get(), (uchar_32) obj->hash.size(), 
+            (uchar*) pass.get(), (uchar_32) pass.size(),
+            (uchar*)_salt.get(), (uchar_32)_salt.size(), 
+            (uchar*) secr.get(), (uchar_32) secr.size(), 
+            (uchar*) addr.get(), (uchar_32) addr.size(), 
+            obj->conf[0], obj->conf[1], obj->conf[2], obj->conf[2], 
+            ARGON2_VERSION_13, NULL, NULL, ARGON2_DEFAULT_FLAGS
+        };  int rc = argon2i_ctx( &ctx ); 
+        
+        if( ARGON2_OK != rc ){ return nullptr; }
+        return encoder::hex::get( obj->hash );
+
+    }
+
+    string_t hash( const string_t& pass, const string_t& salt ) const { 
+      return hash( pass, salt, nullptr, nullptr );
+    }
+
+    string_t hash( const string_t& pass ) const { 
+      return hash( pass, nullptr, nullptr, nullptr );
+    }
+
+    /*.........................................................................*/
+
+    template< class... T >
+    bool verify( const string_t& data, const T&... args ) const noexcept { 
+         return data==hash( args... ); 
     }
 
 };}
+
+/*────────────────────────────────────────────────────────────────────────────*/
+
+namespace nodepp { namespace argon2 { namespace hash {
+
+    template< class... T >
+    string_t get( uchar_32 size, T... args ) {
+    argon2_t argon(size); return argon.hash( args... ); }
+
+}}}
 
 /*────────────────────────────────────────────────────────────────────────────*/
 

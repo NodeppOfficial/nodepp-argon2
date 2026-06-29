@@ -1,34 +1,44 @@
-# NODEPP-ARGON-2
-Argon2 for NodePP
+# Argon2 for NodePP: Secure Password Hashing in C++
 
-## Dependencies
-- **Argon2**
-    - 🪟: `pacman -S mingw-w64-ucrt-x86_64-argon2`
-    - 🐧: `sudo apt install libargon2-dev`
+This project provides a robust and easy-to-use Argon2 password hashing library specifically designed for the NodePP environment. Argon2 is a modern, memory-hard algorithm that won the Password Hashing Competition and is recommended for its strong security properties against various attacks, including GPU cracking. By bringing Argon2 to NodePP, this library enables developers to leverage the performance of C++ for critical security tasks within their asynchronous, event-driven applications.
 
-## Usage 
-```cpp
-#include <nodepp/nodepp.h>
-#include <nodepp/encoder.h>
-#include <argon/argon2.h>
+## Dependencies & Cmake Integration
+```bash
+# Argon2
+    🪟: pacman -S mingw-w64-ucrt-x86_64-argon2
+    🐧: sudo apt install libargon2-dev
+```
+```bash
+include(FetchContent)
 
-using namespace nodepp;
+FetchContent_Declare(
+	nodepp
+	GIT_REPOSITORY   https://github.com/NodeppOfficial/nodepp
+	GIT_TAG          origin/main
+	GIT_PROGRESS     ON
+)
+FetchContent_MakeAvailable(nodepp)
 
-void onMain() {
+FetchContent_Declare(
+	nodepp-argon
+	GIT_REPOSITORY   https://github.com/NodeppOfficial/nodepp-argon
+	GIT_TAG          origin/main
+	GIT_PROGRESS     ON
+)
+FetchContent_MakeAvailable(nodepp-argon)
 
-    ptr_t<uchar> hash ( 32, '\0' );
-    argon2_t argon; 
+#[...]
 
-    argon.hash( hash, "password" );
-    console::log( encoder::hex::get( hash ) );
-
-}
+target_link_libraries( #[...]
+	PUBLIC nodepp nodepp-argon #[...]
+)
 ```
 
 ## Build & Run
-- 🐧: `g++ -o main main.cpp -I ./include -largon2 ; ./main`
-- 🪟: `g++ -o main main.cpp -I ./include -largon2 ; ./main`
+```bash
+🪟: g++ -o main main.cpp -I ./include -largon2 -lws2_32 ; ./main
+🐧: g++ -o main main.cpp -I ./include -largon2          ; ./main
+```
 
 ## License
-
-**Nodepp** is distributed under the MIT License. See the LICENSE file for more details.
+**Nodepp-Argon2** is distributed under the MIT License. See the LICENSE file for more details.
